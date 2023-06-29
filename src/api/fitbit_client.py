@@ -33,6 +33,8 @@ class FitbitApiClient:
             self.fitbit_client = None
             raise Exception(e)
 
+
+
     def get_sleep_data_for_data_range(self, startDate=None, endDate=None):
         """
         Retrieves sleep data for a specified date range. If no start or end date is provided, retrieves all sleep data.
@@ -185,3 +187,7 @@ class FitbitApiClient:
         else:
             print(f"Error retrieving HRV data: {response.status_code} - {response.text}")
             return None
+
+
+
+classmethod

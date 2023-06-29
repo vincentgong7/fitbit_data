@@ -1,8 +1,15 @@
+# import sys
+# sys.path.append('..')
+# sys.path.append('../..')
+
 from src.api.fitbit_client import FitbitApiClient
-from datetime import date, timedelta
+from datetime import date, timedelta, datetime
 import hashlib
-import pymongo
-from pymongo.server_api import ServerApi
+import json
+
+# import pymongo
+# from pymongo.server_api import ServerApi
+
 
 
 class FitbitMongoClient:
@@ -38,11 +45,11 @@ class FitbitMongoClient:
             self.fitbit_api_client = None
             raise Exception(e)
 
-    def import_sleep_data_for_daterange(self, startTime=None, endTime=None):
+    def import_sleep_data_for_daterange(self, output_file_folder, startTime=None, endTime=None):
         sleep_data = self.fitbit_api_client.get_sleep_data_for_data_range(startTime,endTime)
         user_id = hashlib.sha256(self.fitbit_api_client.USER_ID.encode('utf-8')).hexdigest()
 
-
+        total_items = []
         # Iterate through sleep data
         for item in sleep_data['sleep']:
 
@@ -68,13 +75,18 @@ class FitbitMongoClient:
 
                 }
 
-            print(document)
+            # print(document)
+            total_items.append(document)
             # Insert document into MongoDB
+
+        print("# of Total document for sleep data: {}".format(len(total_items)))
+
+        file_name = "{}/fitbit_sleep_data_{}.json".format(output_file_folder, datetime.now().strftime("%d/%m/%Y-%H%M%S"))
+        self.save_to_json(total_items, file_name)
 
         return
 
-
-    def import_heart_data_for_daterange(self, startTime=None, endTime=None, detail_level="1min"):
+    def import_heart_data_for_daterange(self, output_file_folder, startTime=None, endTime=None, detail_level="1min"):
         """
         The function imports heart rate data from the Fitbit API for a given date range and saves it to a MongoDB collection.
 
@@ -95,6 +107,7 @@ class FitbitMongoClient:
         # Hash user ID to maintain anonymity
         user_id = hashlib.sha256(self.fitbit_api_client.USER_ID.encode('utf-8')).hexdigest()
 
+        total_items = []
         # Iterate through each heart rate data point
         for heart_data in multiple_heart_data:
             # Check if the document already exists in the collection
@@ -108,28 +121,37 @@ class FitbitMongoClient:
             }
 
             print(document)
+            total_items.append(document)
 
+        print("# of Total document for heart data: {}".format(len(total_items)))
+        file_name = "{}/fitbit_heart_data_{}.json".format(output_file_folder, datetime.now().strftime("%d/%m/%Y-%H%M%S"))
+        self.save_to_json(total_items, file_name)
         # Return True to indicate successful data import
         return True
+
+
     #
+    def save_to_json(self, data, save_file_name):
+        with open(save_file_name, "w") as final:
+            json.dump(data, final)
+        return
 
 
-# EXAMPLE CODE
-client = FitbitMongoClient(
-    # connection_string="MONGO_URL_GOES_HERE",
-    # database="DATABASE_HERE",
-    # collection="COLLECTION_HERE",
+def main():
+    client = FitbitMongoClient(
+        # Di Yan
+        fitbit_client_id="23R2MG",
+        fitbit_client_secret="c303c1b79b2c306a261ac10fe09c74b0",
 
-    # Di Yan
-    fitbit_client_id="23R2MG",
-    fitbit_client_secret="c303c1b79b2c306a261ac10fe09c74b0",
+        # Vincent
+        # fitbit_client_id="23R2YF",
+        # fitbit_client_secret="76874020fa2a469fe669164f6811ba61",
+    )
+    # endTime = date.today()
+    start_time = "2023-04-01"
+    end_time = "2023-05-01"
+    client.import_sleep_data_for_daterange(start_time, end_time)
+    client.import_heart_data_for_daterange(start_time, end_time)
 
-    # Vincent
-    # fitbit_client_id="23R2YF",
-    # fitbit_client_secret="76874020fa2a469fe669164f6811ba61",
-)
-startTime = date(year = 2023, month = 4, day = 20)
-endTime = date.today()
-# client.import_sleep_data_for_daterange(startTime="2023-04-01")
-client.import_heart_data_for_daterange(startTime="2023-04-01")
-# client.import_hrv_data_for_daterange(startTime)
+if __name__ == '__main__':
+    main()
